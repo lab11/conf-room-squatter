@@ -1,0 +1,144 @@
+<html style="height:100%;">
+<!-- paulirish.com/2008/conditional-stylesheets-vs-css-hacks-answer-neither/ -->
+<!--[if lt IE 7 ]> <html class="ie6" lang="en"> <![endif]-->
+<!--[if IE 7 ]>    <html class="ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]>    <html class="ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--> <html lang="en"> <!--<![endif]-->
+  <head>
+
+    <!-- Meta -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <meta name="author" content="">
+    <meta name="googlebot" content="index,follow">
+
+    <!-- Title -->
+    <title>Where Can I Squat?</title>
+
+    <!-- Templates core CSS -->
+    <link href="static/css/application.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+
+    <style>
+      td, th {
+        border-color: #36454f !important;
+      }
+    </style>
+  </head>
+
+
+<body class="index" id="to-top" style="height:100%;">
+
+  <header class="jumbotron" role="banner" style="height: 100%; text-align:center; background: #2e2f41 url('/static/images/4901.jpg') center; min-height: 100%; min-height: 100vh; display: flex; align-items: center; margin:0">
+
+    <div class="container" style="padding: 40px 30px; background: rgba(255, 255, 255, 0.7);">
+
+      <div class="row" style="display: flex; align-items: center;">
+
+        <div class="col-md-7" style="">
+          <h1 style="font-family: inherit; font-weight: 500; line-height: 1.1; color:#36454f; font-size:44px;">Where Can I Squat?</h1>
+          <p style="color: #36454f;font-size: 20px;">Helping impromptu meetings since 2016.</p>
+        </div>
+
+        <div class="col-md-5">
+
+          <!-- Images showcase -->
+          <figure>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Conference Room</th>
+                  <th>Empty?</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>2725</td><td id="2725">?</td></tr>
+                <tr><td>2733</td><td id="2733">?</td></tr>
+                <tr><td>3725</td><td id="3725">?</td></tr>
+                <tr><td>3901</td><td id="3901">?</td></tr>
+                <tr><td>3941</td><td id="3941">?</td></tr>
+                <tr><td>4901</td><td id="4901">?</td></tr>
+                <tr><td>4941</td><td id="4941">?</td></tr>
+              </tbody>
+            </table>
+          </figure>
+
+        </div>
+      </div>
+    </div>
+  </header>
+
+<script>
+
+function update_room (room, status) {
+  var show = '';
+  if (status == 'UNOCCUPIED') show = 'Yes!';
+  else if (status == 'OCCUPIED' || status == 'UNSURE') show = 'Taken, sorry.';
+
+  $('#' + room).text(show);
+}
+
+var path = 'http://queryer.gatd.io/297579a2-f2ed-4b90-a202-5947c91f11cd?query=';
+var ws_path = 'ws://websocket.gatd.io/35d86615-4143-42be-bec4-faa2add696c0';
+
+var now = Date.now()*1000;
+
+// Get the last 5 minutes to prepopulate all conference rooms.
+var query = {"_gatd.time_utc_timestamp": {"$gt":now-(5*60*1000*1000)}};
+var query_str = window.btoa(JSON.stringify(query));
+
+console.log(query_str)
+
+$.ajax({
+  url: path+query_str,
+  success: function (data) {
+    // console.log(data);
+
+    // Get most recent status from the end
+    var found = {};
+    // Also keep track of the latest timestamp
+    var newest = 0;
+    for (var i=data.length-1; i>=0; i--) {
+      var room = data[i].room;
+      if (!(room in found)) {
+        console.log(data[i])
+        update_room(room, data[i].state);
+        found[room] = true;
+
+        if (data[i]._gatd.time_utc_timestamp > newest) {
+          newest = data[i]._gatd.time_utc_timestamp;
+        }
+      }
+    }
+
+    // Create a websocket to get streaming updates
+    var wsocket = new WebSocket(ws_path)
+    wsocket.onopen = function () {
+      wsocket.send(JSON.stringify({"_gatd.time_utc_timestamp": {"$gt":newest}}));
+    }
+
+    wsocket.onmessage = function (e) {
+      pkt = JSON.parse(e.data);
+      update_room(pkt.room, pkt.state);
+    }
+
+    wsocket.onclose = function () {
+      console.log("closed")
+      // setTimeout(function () {
+      //   console.log("reoponed?");
+      //   wsocket = new WebSocket(ws_path);
+      // }, 5000);
+    }
+  }
+});
+
+
+</script>
+
+</body>
+</html>
+
