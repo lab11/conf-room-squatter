@@ -38,12 +38,12 @@
 
       <div class="row" style="display: flex; align-items: center;">
 
-        <div class="col-md-7" style="">
+        <div class="col-md-5" style="">
           <h1 style="font-family: inherit; font-weight: 500; line-height: 1.1; color:#36454f; font-size:44px;">Where Can I Squat?</h1>
           <p style="color: #36454f;font-size: 20px;">Helping impromptu meetings since 2016.</p>
         </div>
 
-        <div class="col-md-5">
+        <div class="col-md-7">
 
           <!-- Images showcase -->
           <figure>
@@ -52,16 +52,18 @@
                 <tr>
                   <th>Conference Room</th>
                   <th>Empty?</th>
+                  <th>Currently Reserved?</th>
+                  <th>Next Reservation</th>
                 </tr>
               </thead>
               <tbody>
-                <tr><td>2725</td><td id="2725">?</td></tr>
-                <tr><td>2733</td><td id="2733">?</td></tr>
-                <tr><td>3725</td><td id="3725">?</td></tr>
-                <tr><td>3901</td><td id="3901">?</td></tr>
-                <tr><td>3941</td><td id="3941">?</td></tr>
-                <tr><td>4901</td><td id="4901">?</td></tr>
-                <tr><td>4941</td><td id="4941">?</td></tr>
+                <tr><td>2725</td><td id="2725-empty">?</td><td id="2725-curres">?</td><td id="2725-nextres">?</td></tr>
+                <tr><td>2733</td><td id="2733-empty">?</td><td id="2733-curres">?</td><td id="2733-nextres">?</td></tr>
+                <tr><td>3725</td><td id="3725-empty">?</td><td id="3725-curres">?</td><td id="3725-nextres">?</td></tr>
+                <tr><td>3901</td><td id="3901-empty">?</td><td id="3901-curres">?</td><td id="3901-nextres">?</td></tr>
+                <tr><td>3941</td><td id="3941-empty">?</td><td id="3941-curres">?</td><td id="3941-nextres">?</td></tr>
+                <tr><td>4901</td><td id="4901-empty">?</td><td id="4901-curres">?</td><td id="4901-nextres">?</td></tr>
+                <tr><td>4941</td><td id="4941-empty">?</td><td id="4941-curres">?</td><td id="4941-nextres">?</td></tr>
               </tbody>
             </table>
           </figure>
@@ -78,7 +80,37 @@ function update_room (room, status) {
   if (status == 'UNOCCUPIED') show = 'Yes!';
   else if (status == 'OCCUPIED' || status == 'UNSURE') show = 'Taken, sorry.';
 
-  $('#' + room).text(show);
+  $('#' + room + "-empty").text(show);
+
+  if (reservations == undefined) {
+    $('#' + room + '-curres').text('?');
+    $('#' + room + '-nextres').text('?');
+  } else {
+    // Assume empty / free unless invalidated by data
+    $('#' + room + '-curres').text('Nope!');
+    $('#' + room + '-nextres').text('No more today!');
+    if (room in reservations) {
+      var now = new Date();
+      var timeish = (now.getHours() * 100) + now.getMinutes();
+
+      for (res of reservations[room]) {
+        if (timeish > res[1]) {
+          // After finished
+          continue;
+        }
+        if (timeish > res[0]) {
+          // After start
+          if (timeish < res[1]) {
+            $('#' + room + '-curres').text('Yes, for ' + res[2]);
+          }
+        } else {
+          // First entry yet to start
+          $('#' + room + '-nextres').text('At ' + res[0] + ' for ' + res[2]);
+          break;
+        }
+      }
+    }
+  }
 }
 
 var path = 'http://queryer.gatd.io/297579a2-f2ed-4b90-a202-5947c91f11cd?query=';
@@ -90,7 +122,7 @@ var now = Date.now()*1000;
 var query = {"_gatd.time_utc_timestamp": {"$gt":now-(5*60*1000*1000)}};
 var query_str = window.btoa(JSON.stringify(query));
 
-console.log(query_str)
+//console.log(query_str)
 
 $.ajax({
   url: path+query_str,
@@ -104,7 +136,7 @@ $.ajax({
     for (var i=data.length-1; i>=0; i--) {
       var room = data[i].room;
       if (!(room in found)) {
-        console.log(data[i])
+        //console.log(data[i])
         update_room(room, data[i].state);
         found[room] = true;
 
@@ -126,7 +158,7 @@ $.ajax({
     }
 
     wsocket.onclose = function () {
-      console.log("closed")
+      //console.log("closed")
       // setTimeout(function () {
       //   console.log("reoponed?");
       //   wsocket = new WebSocket(ws_path);
@@ -135,8 +167,57 @@ $.ajax({
   }
 });
 
+var reservations = undefined;
+
+$.ajax({
+  url: "https://crossorigin.me/https://www.eecs.umich.edu/eecs/etc/rooms/dco-dbroom.html",
+  success: function (data) {
+    var trashdiv = $("#hack");
+    var whole_page = $.parseHTML(data);
+    trashdiv.append(whole_page);
+    var today_table = $('*:contains("Today\'s Schedule"):not(:has(tbody))').filter('tbody');
+    var title_row = true;
+    reservations = {};
+    $.each(today_table.children(), function (idx) {
+      if ($(this).children().attr('colspan') == 3) {
+        console.log("Skip tr colspan 3");
+        return true;
+      }
+      if (title_row) {
+        title_row = false;
+        return true;
+      }
+      var time    = $($(this).children()[0]).text();
+      var room    = $($(this).children()[1]).text().split(" ")[0];
+      var purpose = $($(this).children()[2]).text();
+
+      var start  = time.split('-')[0];
+      var finish = time.split('-')[1];
+
+      if (start.slice(-1) == 'p') {
+        start = start.split(':')[0] + start.split(':')[1].slice(0,2) + 12;
+      } else {
+        start = start.split(':')[0] + start.split(':')[1].slice(0,2);
+      }
+      if (finish.slice(-1) == 'p') {
+        finish = finish.split(':')[0] + finish.split(':')[1].slice(0,2) + 12;
+      } else {
+        finish = finish.split(':')[0] + finish.split(':')[1].slice(0,2);
+      }
+
+      if (! (room in reservations) ) {
+        reservations[room] = [];
+      }
+      reservations[room].push([start, finish, purpose]);
+    });
+
+    console.log(reservations);
+  },
+});
 
 </script>
+
+<div id="hack" style="display:none;"></div>
 
 </body>
 </html>
