@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js"></script>
 
     <style>
       td, th {
@@ -90,22 +91,21 @@ function update_room (room, status) {
     $('#' + room + '-curres').text('Nope!');
     $('#' + room + '-nextres').text('No more today!');
     if (room in reservations) {
-      var now = new Date();
-      var timeish = (now.getHours() * 100) + now.getMinutes();
+      var now = moment();
 
       for (res of reservations[room]) {
-        if (timeish > res[1]) {
+        if (now > res[1]) {
           // After finished
           continue;
         }
-        if (timeish > res[0]) {
+        if (now > res[0]) {
           // After start
-          if (timeish < res[1]) {
-            $('#' + room + '-curres').text('Yes, for ' + res[2]);
+          if (now < res[1]) {
+            $('#' + room + '-curres').text('Until ' + (moment(res[2])).toNow() + ' for ' + res[2]);
           }
         } else {
           // First entry yet to start
-          $('#' + room + '-nextres').text('At ' + res[0] + ' for ' + res[2]);
+          $('#' + room + '-nextres').text((moment(res[0])).fromNow() + ' for ' + res[2]);
           break;
         }
       }
@@ -180,7 +180,6 @@ $.ajax({
     reservations = {};
     $.each(today_table.children(), function (idx) {
       if ($(this).children().attr('colspan') == 3) {
-        console.log("Skip tr colspan 3");
         return true;
       }
       if (title_row) {
@@ -194,24 +193,37 @@ $.ajax({
       var start  = time.split('-')[0];
       var finish = time.split('-')[1];
 
+      var start_ts = new Date();
+      var finish_ts = new Date();
+
+      var h;
+      var m;
+
+      h = parseInt(start.split(':')[0]);
+      m = parseInt(start.split(':')[1].slice(0,2));
       if (start.slice(-1) == 'p') {
-        start = start.split(':')[0] + start.split(':')[1].slice(0,2) + 12;
-      } else {
-        start = start.split(':')[0] + start.split(':')[1].slice(0,2);
+        if (h != 12) { h += 12 }
       }
+      start_ts.setHours(h);
+      start_ts.setMinutes(m);
+      start_ts.setSeconds(0);
+
+      h = parseInt(finish.split(':')[0]);
+      m = parseInt(finish.split(':')[1].slice(0,2));
       if (finish.slice(-1) == 'p') {
-        finish = finish.split(':')[0] + finish.split(':')[1].slice(0,2) + 12;
-      } else {
-        finish = finish.split(':')[0] + finish.split(':')[1].slice(0,2);
+        if (h != 12) { h += 12 }
       }
+      finish_ts.setHours(h);
+      finish_ts.setMinutes(m);
+      finish_ts.setSeconds(0);
 
       if (! (room in reservations) ) {
         reservations[room] = [];
       }
-      reservations[room].push([start, finish, purpose]);
+      reservations[room].push([start_ts, finish_ts, purpose]);
     });
 
-    console.log(reservations);
+    //console.log(reservations);
   },
 });
 
