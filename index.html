@@ -103,7 +103,6 @@ function update_room (room, status) {
         if (now > res[0]) {
           // After start
           if (now < res[1]) {
-console.log(res[1])
             $('#' + room + '-curres').text('Ending ' + (moment(res[1])).fromNow() + ' for ' + res[2]);
           }
         } else {
