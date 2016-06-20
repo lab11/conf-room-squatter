@@ -37,21 +37,23 @@
 
     <div class="container" style="padding: 40px 30px; background: rgba(255, 255, 255, 0.7);">
 
-      <div class="row" style="display: flex; align-items: center;">
+      <div class="row" style="display: flex; align-items: center; margin-bottom:30px;">
 
-        <div class="col-md-5" style="">
-          <h1 style="font-family: inherit; font-weight: 500; line-height: 1.1; color:#36454f; font-size:44px;">Where Can I Squat?</h1>
-          <p style="color: #36454f;font-size: 20px;">Helping impromptu meetings since 2016.</p>
+          <div class="col-md-12" style="">
+            <h1 style="font-family: inherit; font-weight: 500; line-height: 1.1; color:#36454f; font-size:44px;">Where Can I Squat?</h1>
+            <p style="color: #36454f;font-size: 20px;">Helping impromptu meetings since 2016.</p>
+          </div>
         </div>
 
-        <div class="col-md-7">
+        <div class="row">
+        <div class="col-md-12">
 
           <!-- Images showcase -->
           <figure>
             <table class="table">
               <thead>
                 <tr>
-                  <th>Conference Room</th>
+                  <th>Room</th>
                   <th>Empty?</th>
                   <th>Currently Reserved?</th>
                   <th>Next Reservation</th>
@@ -101,7 +103,8 @@ function update_room (room, status) {
         if (now > res[0]) {
           // After start
           if (now < res[1]) {
-            $('#' + room + '-curres').text('Until ' + (moment(res[2])).toNow() + ' for ' + res[2]);
+console.log(res[1])
+            $('#' + room + '-curres').text('Ending ' + (moment(res[1])).fromNow() + ' for ' + res[2]);
           }
         } else {
           // First entry yet to start
