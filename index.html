@@ -80,7 +80,7 @@
 <script>
 
 function update_room (room, status) {
-  var show = '';
+  var show = $('#' + room + "-empty").text();
   if (status == 'UNOCCUPIED') show = 'Yes!';
   else if (status == 'OCCUPIED' || status == 'UNSURE') show = 'Taken, sorry.';
 
@@ -224,6 +224,9 @@ $.ajax({
         reservations[room] = [];
       }
       reservations[room].push([start_ts, finish_ts, purpose]);
+
+      // Call w/out status so that conf field fill in
+      update_room(room);
     });
 
     //console.log(reservations);
